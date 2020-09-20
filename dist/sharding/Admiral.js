@@ -648,7 +648,7 @@ class Admiral extends events_1.EventEmitter {
                             break;
                         }
                         case "fetchTotalRunningClusters": {
-                            let returnID = message.event.msg;
+                            let returnID = message.returnID;
                             this.broadcast(returnID, this.totalClustersReady);
                             break;
                         }
