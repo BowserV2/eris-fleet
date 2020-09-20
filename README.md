@@ -55,7 +55,7 @@ Accessing the logging information is simple.
 
 ```js
 const { isMaster } =  require('cluster');
-const { Fleet } =  require('eris-fleet');
+const { Fleet } =  require('eris-fleet-advanced-logger');
 
 const options = {
 	/* [ALL OPTIONS NEEDED BY DANCLAY'S VERSION], */
