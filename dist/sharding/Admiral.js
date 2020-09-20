@@ -652,6 +652,10 @@ class Admiral extends events_1.EventEmitter {
                             this.broadcast(returnID, this.totalClustersReady);
                             break;
                         }
+                        case "clusterIsReady": {
+                            this.totalClustersReady++;
+                            break;
+                        }
                     }
                 }
             });
@@ -660,6 +664,7 @@ class Admiral extends events_1.EventEmitter {
                 const service = this.services.find((s) => s.workerID == worker.id);
                 if (cluster) {
                     this.warn(`Admiral | Cluster ${cluster.clusterID} disconnected :(`);
+                    this.totalClustersReady--;
                 }
                 else if (service) {
                     this.warn(`Admiral | Service ${service.serviceName} disconnected :(`);
@@ -672,6 +677,7 @@ class Admiral extends events_1.EventEmitter {
                         const cluster = this.clusters.find((c) => c.workerID == worker.id);
                         const service = this.services.find((s) => s.workerID == worker.id);
                         if (cluster) {
+                            this.totalClustersReady--;
                             return "Cluster " + cluster.clusterID;
                         }
                         else if (service) {
@@ -719,6 +725,7 @@ class Admiral extends events_1.EventEmitter {
                                             const cluster = this.clusters.find((c) => c.workerID == item.workerID);
                                             const service = this.services.find((s) => s.workerID == item.workerID);
                                             if (cluster) {
+                                                this.totalClustersReady--;
                                                 return "Cluster " + cluster.clusterID;
                                             }
                                             else if (service) {
@@ -1032,6 +1039,7 @@ class Admiral extends events_1.EventEmitter {
                 this.softKills.set(worker.id, {
                     fn: (failed) => {
                         if (!failed) {
+                            this.totalClustersReady--;
                             this.log("cluster_shutdown", `Admiral | Safely shutdown cluster ${cluster.clusterID}`);
                             worker.kill();
                         }
@@ -1049,6 +1057,7 @@ class Admiral extends events_1.EventEmitter {
             }
             else {
                 worker.kill();
+                this.totalClustersReady--;
                 if (this.whatToLog.includes("cluster_shutdown")) {
                     this.log("cluster_shutdown", `Admiral | Hard shutdown of cluster ${cluster.clusterID} complete`);
                 }
@@ -1120,6 +1129,7 @@ class Admiral extends events_1.EventEmitter {
                             this.log("cluster_restart", `Admiral | Killing old worker for cluster ${cluster.clusterID}`);
                         }
                         this.shutdownWorker(worker, true, () => {
+                            this.totalClustersReady--;
                             if (this.whatToLog.includes("cluster_restart")) {
                                 this.log("cluster_restart", `Admiral | Killed old worker for cluster ${cluster.clusterID}`);
                             }
@@ -1132,6 +1142,7 @@ class Admiral extends events_1.EventEmitter {
                     type: "cluster",
                     id: cluster.clusterID,
                 });
+                this.totalClustersReady--;
                 if (this.whatToLog.includes("cluster_restart")) {
                     this.log("cluster_restart", `Admiral | Performing soft restart of cluster ${cluster.clusterID}`);
                 }
@@ -1146,6 +1157,7 @@ class Admiral extends events_1.EventEmitter {
                 }
                 this.clusters.delete(cluster.clusterID);
                 this.clusters.set(cluster.clusterID, Object.assign(cluster, { workerID: newWorker.id }));
+                this.totalClustersReady--;
                 if (this.whatToLog.includes("cluster_restart")) {
                     this.log("cluster_restart", `Admiral | Restarting cluster ${cluster.clusterID}`);
                 }

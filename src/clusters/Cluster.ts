@@ -249,6 +249,7 @@ export class Cluster {
 		bot.on("ready", () => {
 			// @ts-ignore
 			if (this.whatToLog.includes("cluster_ready")) console.logMoreInfo('cluster_ready', `Shards ${this.firstShardID} - ${this.lastShardID} are ready!`);
+			if(process.send) process.send({op: "clusterIsReady"})
 		});
 
 		bot.once("ready", () => {

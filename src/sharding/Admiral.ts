@@ -183,8 +183,8 @@ export class Admiral extends EventEmitter {
 	}>;
     private fetchTimeout: number;
     
-    /** Extra data for eris-fleet-extra-logging */
-    public totalClustersReady?: number;
+    /** Extra data for eris-fleet-advanced-logging */
+    public totalClustersReady: number;
 
 	public constructor(options: Options) {
 		super();
@@ -822,6 +822,11 @@ export class Admiral extends EventEmitter {
                         this.broadcast(returnID, this.totalClustersReady)
                         break;
                     }
+                    
+                    case "clusterIsReady": {
+                        this.totalClustersReady++;
+                        break;
+                    }
                     }
                     
 				}
@@ -835,7 +840,8 @@ export class Admiral extends EventEmitter {
 					(s: ServiceCollection) => s.workerID == worker.id,
 				);
 				if (cluster) {
-					this.warn(`Admiral | Cluster ${cluster.clusterID} disconnected :(`);
+                    this.warn(`Admiral | Cluster ${cluster.clusterID} disconnected :(`);
+                    this.totalClustersReady--;
 				} else if (service) {
 					this.warn(`Admiral | Service ${service.serviceName} disconnected :(`);
 				}
@@ -846,8 +852,9 @@ export class Admiral extends EventEmitter {
 					const name = () => {
 						const cluster = this.clusters.find((c: ClusterCollection) => c.workerID == worker.id);
 						const service = this.services.find((s: ServiceCollection) => s.workerID == worker.id);
-						if (cluster) {
-							return "Cluster " + cluster.clusterID;
+                        if (cluster) {
+                            this.totalClustersReady--;
+                            return "Cluster " + cluster.clusterID;
 						} else if (service) {
 							return "Service " + service.serviceName;
 						} else {
@@ -887,7 +894,8 @@ export class Admiral extends EventEmitter {
 									const name = () => {
 										const cluster = this.clusters.find((c: ClusterCollection) => c.workerID == item.workerID);
 										const service = this.services.find((s: ServiceCollection) => s.workerID == item.workerID);
-										if (cluster) {
+                                        if (cluster) {
+                                            this.totalClustersReady--;
 											return "Cluster " + cluster.clusterID;
 										} else if (service) {
 											return "Service " + service.serviceName;
@@ -1217,7 +1225,8 @@ export class Admiral extends EventEmitter {
 				// Preform soft shutdown
 				this.softKills.set(worker.id, {
 					fn: (failed?: boolean) => {
-						if (!failed) {
+                        if (!failed) {
+                            this.totalClustersReady--;
 							this.log("cluster_shutdown", `Admiral | Safely shutdown cluster ${cluster.clusterID}`);
 							worker.kill();
 						}
@@ -1231,7 +1240,8 @@ export class Admiral extends EventEmitter {
 					this.log("cluster_shutdown", `Admiral | Performing soft shutdown of cluster ${cluster.clusterID}`);
 				}
 			} else {
-				worker.kill();
+                worker.kill();
+                this.totalClustersReady--;
 				if (this.whatToLog.includes("cluster_shutdown")) {
 					this.log("cluster_shutdown", `Admiral | Hard shutdown of cluster ${cluster.clusterID} complete`);
 				}
@@ -1299,11 +1309,12 @@ export class Admiral extends EventEmitter {
 				this.pauseStats = true;
 				this.softKills.set(newWorker.id, {
 					fn: () => {
-						this.softKills.delete(newWorker.id);
+                        this.softKills.delete(newWorker.id);
 						if (this.whatToLog.includes("cluster_restart")) {
 							this.log("cluster_restart", `Admiral | Killing old worker for cluster ${cluster.clusterID}`);
 						}
-						this.shutdownWorker(worker, true, () => {
+                        this.shutdownWorker(worker, true, () => {
+                            this.totalClustersReady--;
 							if (this.whatToLog.includes("cluster_restart")) {
 								this.log("cluster_restart", `Admiral | Killed old worker for cluster ${cluster.clusterID}`);
 							}
@@ -1318,13 +1329,15 @@ export class Admiral extends EventEmitter {
 					},
 					type: "cluster",
 					id: cluster.clusterID,
-				});
+                });
+                this.totalClustersReady--;
 				if (this.whatToLog.includes("cluster_restart")) {
 					this.log("cluster_restart", `Admiral | Performing soft restart of cluster ${cluster.clusterID}`);
 				}
 			} else {
 				if (manual) {
-					worker.kill();
+                    worker.kill();
+                    
 					this.warn(
 						`Admiral | Cluster ${cluster.clusterID} killed upon request`,
 					);
@@ -1335,7 +1348,8 @@ export class Admiral extends EventEmitter {
 				this.clusters.set(
 					cluster.clusterID,
 					Object.assign(cluster, {workerID: newWorker.id}),
-				);
+                );
+                this.totalClustersReady--;
 				if (this.whatToLog.includes("cluster_restart")) {
 					this.log("cluster_restart", `Admiral | Restarting cluster ${cluster.clusterID}`);
 				}
