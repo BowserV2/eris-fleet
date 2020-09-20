@@ -1,8 +1,10 @@
 <div align="center">
   <p>
+  <a href="https://github.com/abalabahaha/eris"><img src="https://img.shields.io/badge/Discord%20Library-Eris-blue?style=flat-square" alt="Library" /></a>
     <a href="https://www.npmjs.com/package/eris-fleet"><img src="https://img.shields.io/npm/v/eris-fleet.svg?cacheSeconds=3600&style=flat-square" alt="NPM version" /></a>
     <a href="https://raw.githubusercontent.com/danclay/eris-fleet/master/LICENSE"><img alt="License" src="https://img.shields.io/npm/l/eris-fleet?style=flat-square">
     <a href="https://david-dm.org/danclay/eris-fleet/"><img src="https://img.shields.io/david/danclay/eris-fleet.svg?cacheSeconds=3600&style=flat-square" alt="Dependencies" /></a>
+    <a href="https://travis-ci.com/github/danclay/eris-fleet/builds"><img src="https://api.travis-ci.com/danclay/eris-fleet.svg?branch=master" alt="Build" /></a>
   </p>
   <p>
     <a href="https://nodei.co/npm/eris-fleet/"><img src="https://nodeico.herokuapp.com/eris-fleet.svg"></a>
@@ -13,11 +15,15 @@
 
 A spin-off of [eris-sharder](https://github.com/discordware/eris-sharder) and [megane](https://github.com/brussell98/megane) with services and configurable logging.
 
+For some more documentation check the [wiki on Github](https://github.com/danclay/eris-fleet/wiki) and the [README on GitHub](https://github.com/danclay/eris-fleet/blob/master/README.md).
+
 ## Highlighted Features:
 
 - Clustering across cores
 - Sharding
+- Recalculate shards with minimal downtime
 - Customizable logging
+- Fetch data from across clusters easily
 - Services (non-eris workers)
 - IPC to communicate between clusters, other clusters, and services
 - Detailed stats collection
@@ -26,8 +32,9 @@ A spin-off of [eris-sharder](https://github.com/discordware/eris-sharder) and [m
 - Graceful shutdowns
 
 # Installation
-Run `npm install eris-fleet`
-or with yarn: `yarn add eris-fleet`
+Run `npm install eris-fleet` or with yarn: `yarn add eris-fleet`.
+
+To use a less refined, but more up-to-date branch, use `npm install danclay/eris-fleet#dev` or `yarn add danclay/eris-fleet#dev`. [Documentation for the dev branch.](https://github.com/danclay/eris-fleet/tree/dev)
 
 # Basics
 
@@ -106,7 +113,8 @@ module.exports = class BotWorker extends BaseClusterWorker {
     }
 }
 ```
-The bot above will respond with "Pong!" when it recieves the command "!ping". **Make sure your bot file extends BaseClusterWorker!**
+**Make sure your bot file extends BaseClusterWorker!**
+The bot above will respond with "Pong!" when it recieves the command "!ping".
 
 ## Services
 
@@ -148,7 +156,7 @@ module.exports = class ServiceWorker extends BaseServiceWorker {
     }
 }
 ```
-**Make sure your bot file extends BaseServiceWorker!**
+**Make sure your service file extends BaseServiceWorker!**
 This service will simply return a value within an object sent to it within the command message called "smileyFace". Services can be used for much more than this though. To send a command to this service, you could use this:
 ```js
 const reply = await this.ipc.command("myService", {smileyFace: ":)"}, true);
@@ -199,19 +207,54 @@ Here is a complete list of options you can pass to the Admiral through the Fleet
 | clusterTimeout | How long to wait between connecting clusters to Discord (in ms)                                                                              | Yes       | 5000                      |
 | nodeArgs       | Node arguments to pass to clusters                                                                                                           | Yes       |                           |
 | statsInterval  | How often to update the stats (in ms) after all clusters are connected. To disable stats, set to 'disable'                                   | Yes       | 60000                     |
-| services       | Services to register. An array of the following object:  `{name: "name of your service", path: "absolute path to your service"}`             | Yes       |                           |
+| services       | Services to register. The format of the services array is shown below this table. Your services will start in the order of this array.             | Yes       |                           |
 | firstShardID   | The ID of the first shard to use for this fleet. Use this if you have multiple fleets running on separate machines (really, really big bots) | Yes       | 0                         |
 | lastShardID    | The ID of the first shard to use for this fleet. Use this if you have multiple fleets running on separate machines (really, really big bots) | Yes       | Total count of shards - 1 |
 | lessLogging    | Reduces the number of logs the Admiral sends (boolean)                                                                                       | Yes       | false                     |
 | whatToLog      | Choose what to log (see details below)                                                                                                       | Yes       |                           |
 | whatToLog.whitelist | Whitelist for lessLogging                                                                                                             | Yes       |                     |
 | whatToLog.blacklist | Blacklist for lessLogging                                                                                                             | Yes       |                     |
-| killTimeout    | Timeout before killing the proccess during shutdown                                                                                          | Yes       | infinite                  |
-| objectLogging  | Sends logs in an object format that follows: `{source: "the source", message: "the message", timestamp: "the UTC timestamp"}                 | Yes       | false                     |
+| killTimeout    | Timeout before killing the proccess during shutdown (in ms)                                                                                | Yes       | 10000                  |
+| fetchTimeout    | Timeout before giving up on a value fetch (in ms)                                                                                           | Yes       | infinite                  |
+| objectLogging  | Sends logs in an object format shown below this table                 | Yes       | false                     |
+| startingStatus  | Status to set while the cluster is getting ready. Follows the format shown below this table. Note that if you want to clear it you will have to do it yourself in your bot.js file.                 | Yes       |                      |
+
+### Formats
+
+Here are the formats mentioned in the table above.
+
+#### services
+
+```ts
+Array<{name: "name of your service", path: "absolute path to your service"}>
+```
+
+#### objectLogging
+
+```ts
+{
+    source: String, 
+    message: String, 
+    timestamp: Number
+}
+```
+
+#### startingStatus
+
+```ts
+{
+    status: "online" | "idle" | "dnd" | "invisible", 
+    game?: {
+        name: String,
+        type?: 0 | 1 | 2 | 3, 
+        url?: String
+    }
+}
+```
 
 ### Choose what to log
 
-You can choose what to log by using the `whatToLog` property in the options object. You can choose either a whitelist or a blacklist of what to log. You can select what to log by using an array. To possible array elements are `['gateway_shards', 'admiral_start', 'shards_spread', 'stats_update', 'all_clusters_launched', 'all_services_launched', 'cluster_launch', 'service_launch', 'cluster_start', 'service_start', 'service_ready', 'cluster_ready', 'shard_connect', 'shard_ready', 'shard_disconnect', 'shard_resume', 'service_restart', 'cluster_restart', 'service_shutdown', 'cluster_shutdown', 'total_shutdown']`. Here is an example of choosing what to log:
+You can choose what to log by using the `whatToLog` property in the options object. You can choose either a whitelist or a blacklist of what to log. You can select what to log by using an array. To possible array elements are `['gateway_shards', 'admiral_start', 'shards_spread', 'stats_update', 'all_clusters_launched', 'all_services_launched', 'cluster_launch', 'service_launch', 'cluster_start', 'service_start', 'service_ready', 'cluster_ready', 'shard_connect', 'shard_ready', 'shard_disconnect', 'shard_resume', 'service_restart', 'cluster_restart', 'service_shutdown', 'cluster_shutdown', 'total_shutdown', 'resharding_transition_complete', 'resharding_transition', 'resharding_worker_killed']`. Here is an example of choosing what to log:
 ```js
 const options = {
     // Your other options
@@ -257,7 +300,7 @@ You can also restart all the clusters. You can do this by using
 ```js
 this.ipc.restartAllClusters();
 ```
-If you want to preform a hard restart, use `this.ipc.restartAllClusters(true)`.
+**This may take up lots of resources since you will have double the workers running on your machine until the transition is complete.** If you want to preform a hard restart, use `this.ipc.restartAllClusters(true)`.
 
 ### Shutdown clusters
 
@@ -300,6 +343,14 @@ this.ipc.totalShutdown();
 The above code will shutdown the service gracefully. If you would like to kill the worker immediately, use `this.ipc.totalShutdown(true)`.
 **A total shutdown exits all processes, including the master process.**
 
+### Resharding
+
+You can order a resharding with the following:
+```js
+this.ipc.reshard();
+```
+Resharding attempts to recalculate the number of shards while keeping your bot running. This is done by keeping the old workers running until the new ones are ready. Your code will only load on the new workers once they are all ready for the transition. **This may take up lots of resources since you will have double the workers running on your machine until the transition is complete.**
+
 ### Register
 
 You can register certain events to a callback. This can recieve [broadcasts](#broadcast) and stats. The object sent in the callback is `{op: "the event's name", msg: "the message"}`. Here is an example of registering an event:
@@ -309,20 +360,23 @@ this.ipc.register("stats", (message) => {
   console.log(message.msg);
 });
 ```
+You can register to a single event multiple times with multiple functions.
 
 ### Unregister
 
-You can unregister events you registered above.
+You can unregister events you registered above. **Note: This will delete all registrations to a single event.**
 ```js
 this.ipc.unregister("stats");
 ```
 
-### Broadcast to all clusters
+### Broadcast to all workers
 
 You can broadcast events that other clusters can recieve by [registering](#register) with the event. The first argument is the name of the event you are broadcasting (this should match the name of the event other clusters are registered to). The second argument is optional and is the the message you want to send. Note that the cluster sending this will also recieve the broadcast since this broadcasts to **all** clusters.
 ```js
 this.ipc.broadcast("hello clusters!", "Want to chat?");
 ```
+
+**The following event namespaces are occupied by eris-fleet: connect, fetchUser, fetchChannel, fetchGuild, fetchMember, return, collectStats, shutdown, loadCode, command, stats. Issues may occur if you broadcast these events.**
 
 ### Send to a specific cluster
 
@@ -331,33 +385,52 @@ You can send a message from one cluster to another specific cluster based on the
 this.ipc.sendTo(1, "Hello cluster 1!", "Squad up?");
 ```
 
+**The following event namespaces are occupied by eris-fleet: connect, fetchUser, fetchChannel, fetchGuild, fetchMember, return, collectStats, shutdown, loadCode, command, stats. Issues may occur if you broadcast these events.**
+
+### Send an event to the master process
+
+You can send a message through Admiral to your index.js file. The arguments are the same as broadcasting to workers. Here are examples:
+```js
+// Sending the event
+this.ipc.admiralBroadcast("Hello", "I'm working!");
+
+// Receiving the event in your index.js file
+Admiral.on("Hello", (r) => {
+    console.log(r);
+});
+```
+
 ### Fetch a user
 
-Fetches a user from another cluster. Not much to explain here. The only argument used should be the ID of the user. Be sure to `await` this or use `.then()`
+Fetches a user from another cluster. Not much to explain here. The only argument used should be the ID of the user. Be sure to `await` this or use `.then()`.
 ```js
 await this.ipc.fetchUser(123456789);
 ```
+**This will return null if no value can be found or if it takes too long (See fetchTimout in options)**
 
 ### Fetch a guild
 
-Fetches a guild from another cluster. The only argument used should be the ID of the guild. Be sure to `await` this or use `.then()`
+Fetches a guild from another cluster. The only argument used should be the ID of the guild. Be sure to `await` this or use `.then()`.
 ```js
 await this.ipc.fetchGuild(123456789);
 ```
+**This will return null if no value can be found or if it takes too long (See fetchTimout in options)**
 
 ### Fetch a channel
 
-Fetches a channel from another cluster. The only argument used should be the ID of the channel. Be sure to `await` this or use `.then()`
+Fetches a channel from another cluster. The only argument used should be the ID of the channel. Be sure to `await` this or use `.then()`.
 ```js
 await this.ipc.fetchChannel(123456789);
 ```
+**This will return null if no value can be found or if it takes too long (See fetchTimout in options)**
 
 ### Fetch a member
 
-Fetches a member from another cluster. The first argument should be the ID of the member. The second argument should the be ID of the guild the member is in. Be sure to `await` this or use `.then()`
+Fetches a member from another cluster. The first argument should be the ID of the guild. The second argument should the be ID of the member. Be sure to `await` this or use `.then()`.
 ```js
 await this.ipc.fetchMember(123456789, 987654321); 
 ```
+**This will return null if no value can be found or if it takes too long (See fetchTimout in options)**
 
 ### Send a command to a service
 
@@ -367,16 +440,40 @@ Send a command to a service. The arguments are as follows:
 | 1st       | Name of the service            | No        |         |
 | 2nd       | Message to send to the command | Yes       | null    |
 | 3rd       | If you want a response or not  | Yes       | false   |
+
 Be sure to use `await` or `.then()`, especially if you expect a response.
 ```js
 await this.ipc.command("ServiceName", "hello service!", true); 
 ```
+You can catch errors with service commands with `.catch()`.
 
 ### Get the latest stats
 
 Gets the latest stats. This is an alternative to [registering](#register) the "stats" event. Be sure to use `await` or `.then()`
 ```js
 await this.ipc.getStats();
+```
+
+## Do stuff from your master process
+
+You can do a few things from your master process. Here are some examples:
+```js
+const { isMaster } = require('cluster');
+const { Fleet } = require('eris-fleet');
+
+const options = {
+    // your options
+};
+
+const Admiral = new Fleet(options);
+
+if (isMaster) {
+    // Broadcasts a message
+    Admiral.broadcast("the operation", "an optional message");
+    // Reshards
+    Admiral.reshard();
+}
+
 ```
 
 ## Stats
