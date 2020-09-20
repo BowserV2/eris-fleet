@@ -25,6 +25,9 @@ const cluster_1 = require("cluster");
 const util_1 = require("util");
 class Cluster {
     constructor() {
+        // @ts-ignore
+        console.logMoreInfo = (logger, str) => { if (process.send)
+            process.send({ op: "log", msg: str, logger: logger, source: `Cluster ${this.clusterID}` }); };
         console.log = (str) => { if (process.send)
             process.send({ op: "log", msg: str, source: "Cluster " + this.clusterID }); };
         console.debug = (str) => { if (process.send)
@@ -204,8 +207,9 @@ class Cluster {
         });
     }
     async connect() {
+        // @ts-ignore
         if (this.whatToLog.includes("cluster_start"))
-            console.log(`Connecting with ${this.shards} shard(s)`);
+            console.logMoreInfo('cluster_start', `Connecting with ${this.shards} shard(s)`);
         const options = Object.assign(this.clientOptions, { autoreconnect: true, firstShardID: this.firstShardID, lastShardID: this.lastShardID, maxShards: this.shardCount });
         let App = (await Promise.resolve().then(() => __importStar(require(this.path))));
         let bot;
@@ -234,24 +238,28 @@ class Cluster {
             }
         };
         bot.on("connect", (id) => {
+            // @ts-ignore
             if (this.whatToLog.includes("shard_connect"))
-                console.log(`Shard ${id} connected!`);
+                console.logMoreInfo('shard_connect', `Shard ${id} connected!`);
         });
         bot.on("shardDisconnect", (err, id) => {
+            // @ts-ignore
             if (!this.shutdown)
                 if (this.whatToLog.includes("shard_disconnect"))
-                    console.log(`Shard ${id} disconnected with error: ${util_1.inspect(err)}`);
+                    console.logMoreInfo('shard_disconnect', `Shard ${id} disconnected with error: ${util_1.inspect(err)}`);
         });
         bot.once("shardReady", () => {
             setStatus();
         });
         bot.on("shardReady", (id) => {
+            // @ts-ignore
             if (this.whatToLog.includes("shard_ready"))
-                console.log(`Shard ${id} is ready!`);
+                console.logMoreInfo('shard_ready', `Shard ${id} is ready!`);
         });
         bot.on("shardResume", (id) => {
+            // @ts-ignore
             if (this.whatToLog.includes("shard_resume"))
-                console.log(`Shard ${id} has resumed!`);
+                console.logMoreInfo('shard_resume', `Shard ${id} has resumed!`);
         });
         bot.on("warn", (message, id) => {
             if (process.send)
@@ -262,8 +270,9 @@ class Cluster {
                 process.send({ op: "error", msg: util_1.inspect(error), source: `Cluster ${this.clusterID}, Shard ${id}` });
         });
         bot.on("ready", () => {
+            // @ts-ignore
             if (this.whatToLog.includes("cluster_ready"))
-                console.log(`Shards ${this.firstShardID} - ${this.lastShardID} are ready!`);
+                console.logMoreInfo('cluster_ready', `Shards ${this.firstShardID} - ${this.lastShardID} are ready!`);
         });
         bot.once("ready", () => {
             this.App = App;

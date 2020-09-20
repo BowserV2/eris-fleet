@@ -132,6 +132,8 @@ export declare class Admiral extends EventEmitter {
     private statsStarted;
     private fetches;
     private fetchTimeout;
+    /** Extra data for eris-fleet-extra-logging */
+    totalClustersReady?: number;
     constructor(options: Options);
     private launch;
     /** Reshard */
@@ -147,7 +149,7 @@ export declare class Admiral extends EventEmitter {
     broadcast(op: string, msg: unknown): void;
     error(message: any, source?: string): void;
     debug(message: any, source?: string): void;
-    log(message: any, source?: string): void;
+    log(logger: string, message: any, source?: string): void;
     warn(message: any, source?: string): void;
 }
 export {};
