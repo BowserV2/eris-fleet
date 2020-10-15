@@ -2,7 +2,7 @@
   "name": "eris-fleet-advanced-logging",
   "version": "0.0.1",
   "dependencies": {
-    "eris": "0.13.1"
+    "eris": "^0.13.3"
   },
   "description": "Cluster management for Discord bots using the Eris library. Inspired by eris-sharder and @brussell98/megane. Forked and edited to support advanced logging",
   "main": "dist/index.js",
