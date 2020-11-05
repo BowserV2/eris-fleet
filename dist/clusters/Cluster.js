@@ -27,15 +27,15 @@ class Cluster {
     constructor() {
         // @ts-ignore
         console.logMoreInfo = (logger, str) => { if (process.send)
-            process.send({ op: "log", msg: util_1.inspect(str), logger: logger, source: `Cluster ${this.clusterID}` }); };
+            process.send({ op: "log", msg: `${typeof str == 'string' ? str : util_1.inspect(str)}`, logger: logger, source: `Cluster ${this.clusterID}` }); };
         console.log = (str) => { if (process.send)
-            process.send({ op: "log", msg: util_1.inspect(str), source: "Cluster " + this.clusterID }); };
+            process.send({ op: "log", msg: `${typeof str == 'string' ? str : util_1.inspect(str)}`, source: "Cluster " + this.clusterID }); };
         console.debug = (str) => { if (process.send)
-            process.send({ op: "debug", msg: util_1.inspect(str), source: "Cluster " + this.clusterID }); };
+            process.send({ op: "debug", msg: `${typeof str == 'string' ? str : util_1.inspect(str)}`, source: "Cluster " + this.clusterID }); };
         console.error = (str) => { if (process.send)
-            process.send({ op: "error", msg: util_1.inspect(str), source: "Cluster " + this.clusterID }); };
+            process.send({ op: "error", msg: `${typeof str == 'string' ? str : util_1.inspect(str)}`, source: "Cluster " + this.clusterID }); };
         console.warn = (str) => { if (process.send)
-            process.send({ op: "warn", msg: util_1.inspect(str), source: "Cluster " + this.clusterID }); };
+            process.send({ op: "warn", msg: `${typeof str == 'string' ? str : util_1.inspect(str)}`, source: "Cluster " + this.clusterID }); };
         //Spawns
         process.on("uncaughtException", (err) => {
             if (process.send)
